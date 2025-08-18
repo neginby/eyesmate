@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'reminder_page.dart';
 import 'camera_page.dart';
-import 'page3.dart';
-import 'EyeCareTips.dart';
+import 'screen_time.dart';
+import 'eye_care_tips.dart';
 
 class HomePage extends StatelessWidget {
   final String userName;
