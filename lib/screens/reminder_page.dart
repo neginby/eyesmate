@@ -45,7 +45,7 @@ class _Page1State extends State<Page1> {
                     ),
                     child: Column(
                       children: [
-                        // لوگو + نام برنامه
+                        // logo and name
                         Center(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -74,13 +74,13 @@ class _Page1State extends State<Page1> {
 
                         SizedBox(height: screenHeight * 0.06),
 
-                        // تایمر دایره‌ای
+                        // circular timer
                         SizedBox(
                           height: screenHeight * 0.4,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              // دایره بیرونی (دقیقه‌ها)
+                              // outer circle min
                               CircularTimer(
                                 radius: screenWidth * 0.43,
                                 strokeWidth: 20,
@@ -95,7 +95,7 @@ class _Page1State extends State<Page1> {
                                 showTicks: true,
                                 handleAsset: 'assets/images/eye_break_icon.png',
                               ),
-                              // دایره داخلی (ثانیه‌ها)
+                              // inner circle sec
                               CircularTimer(
                                 radius: screenWidth * 0.29,
                                 strokeWidth: 15,
@@ -116,7 +116,7 @@ class _Page1State extends State<Page1> {
 
                         SizedBox(height: screenHeight * 0.06),
 
-                        // نمایش مقادیر
+                        // show valuse
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
@@ -137,7 +137,7 @@ class _Page1State extends State<Page1> {
 
                         SizedBox(height: screenHeight * 0.05),
 
-                        // سوئیچ یادآوری
+                        // reminder switch
                         _buildReminderToggle(screenWidth, screenHeight),
 
                         SizedBox(height: screenHeight * 0.04),
@@ -173,7 +173,7 @@ class _Page1State extends State<Page1> {
                   ),
                 ),
 
-                // دکمه بازگشت — آخر لیست children تا روی همه چیز باشد
+                // back bottom
                 Positioned(
                   top: 8,
                   left: 8,
@@ -390,10 +390,10 @@ class CircularTimerPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
-    // دایره پس‌زمینه
+    // background circle
     canvas.drawCircle(center, radius - strokeWidth / 2, paint);
 
-    // بخش پر شده
+    // filled
     paint.color = color;
     paint.strokeCap = StrokeCap.round;
 

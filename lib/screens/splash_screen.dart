@@ -48,16 +48,6 @@ class _SplashScreenState extends State<SplashScreen> {
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.9,
                     height: MediaQuery.of(context).size.width * 0.9,
-                    // decoration: BoxDecoration(
-                    //   color: const Color(0xFFB0B0B0).withOpacity(0.2),
-                    //   shape: BoxShape.circle,
-                    // ),
-                    // child: const Icon(
-                    //   Icons.visibility,
-                    //   size: 60,
-                    //   color: Color(0xFFB0B0B0),
-                    // ),
-                    // TODO: Replace the Icon above with your logo image:
                      child: Image.asset('assets/images/icon1.png'),
                   ),
 
