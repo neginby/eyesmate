@@ -1,10 +1,12 @@
-// File: /lib/main.dart
-
+// lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'providers/usage_provider.dart';
 import 'screens/splash_screen.dart';
 
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-void main() {
   runApp(const EyesMateApp());
 }
 
@@ -13,15 +15,21 @@ class EyesMateApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'EyesMate',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Jost',
-        primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: const Color(0xFF011222),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UsageProvider()),
+        // اگه Provider دیگه هم خواستی اضافه کن
+      ],
+      child: MaterialApp(
+        title: 'EyesMate',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          fontFamily: 'Jost',
+          primarySwatch: Colors.blue,
+          scaffoldBackgroundColor: const Color(0xFF011222),
+        ),
+        home: const SplashScreen(), // همون فلوی خودت
       ),
-      home: const SplashScreen(),
     );
   }
 }

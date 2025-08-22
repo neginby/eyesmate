@@ -1,19 +1,8 @@
-// /lib/widgets/screen_time_widgets.dart
+// lib/widgets/screen_time_widgets.dart
+import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
+import '../models/usage_models.dart';
 
-class AppUsageData {
-  final String appName;
-  final int percentage;
-  final String timeSpent;
-  final Color color;
-
-  AppUsageData({
-    required this.appName,
-    required this.percentage,
-    required this.timeSpent,
-    required this.color,
-  });
-}
 
 class TotalScreenTimeCard extends StatelessWidget {
   final int totalHours;
@@ -32,6 +21,11 @@ class TotalScreenTimeCard extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
+    // Calculate progress percentage
+    final totalMinutesToday = (totalHours * 60) + totalMinutes;
+    final goalMinutes = dailyGoalHours * 60;
+    final progressPercentage = goalMinutes > 0 ? (totalMinutesToday / goalMinutes).clamp(0.0, 1.0) : 0.0;
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(screenWidth * 0.05),
@@ -48,23 +42,48 @@ class TotalScreenTimeCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Circular progress indicator (placeholder)
-          Container(
+          // Circular progress indicator with real progress
+          SizedBox(
             width: 60,
             height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF8B83B6),
-                width: 4,
-              ),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.access_time,
-                color: Color(0xFF8B83B6),
-                size: 24,
-              ),
+            child: Stack(
+              children: [
+                // Background circle
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF8B83B6).withOpacity(0.3),
+                      width: 4,
+                    ),
+                  ),
+                ),
+                // Progress circle
+                SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: CircularProgressIndicator(
+                    value: progressPercentage,
+                    strokeWidth: 4,
+                    backgroundColor: Colors.transparent,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      progressPercentage > 0.8
+                          ? const Color(0xFFFF6B35) // Red if over 80%
+                          : const Color(0xFF8B83B6), // Default purple
+                    ),
+                  ),
+                ),
+                // Center icon
+                const Center(
+                  child: Icon(
+                    Icons.access_time,
+                    color: Color(0xFF8B83B6),
+                    size: 24,
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -79,7 +98,7 @@ class TotalScreenTimeCard extends StatelessWidget {
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: '${totalHours}',
+                        text: '$totalHours',
                         style: TextStyle(
                           fontFamily: 'Jost',
                           fontSize: screenWidth * 0.08,
@@ -97,7 +116,7 @@ class TotalScreenTimeCard extends StatelessWidget {
                         ),
                       ),
                       TextSpan(
-                        text: '${totalMinutes}',
+                        text: '$totalMinutes',
                         style: TextStyle(
                           fontFamily: 'Jost',
                           fontSize: screenWidth * 0.08,
@@ -123,15 +142,19 @@ class TotalScreenTimeCard extends StatelessWidget {
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF98C897),
+                      decoration: BoxDecoration(
+                        color: progressPercentage > 0.8
+                            ? const Color(0xFFFF6B35)
+                            : const Color(0xFF98C897),
                         shape: BoxShape.circle,
                       ),
                     ),
                     SizedBox(width: screenWidth * 0.02),
                     Expanded(
                       child: Text(
-                        'Daily goal $dailyGoalHours hours',
+                        progressPercentage > 1.0
+                            ? 'Exceeded daily goal by ${((progressPercentage - 1) * dailyGoalHours).toStringAsFixed(1)} hours'
+                            : 'Daily goal $dailyGoalHours hours',
                         style: TextStyle(
                           fontFamily: 'Jost',
                           fontSize: screenWidth * 0.035,
@@ -164,6 +187,10 @@ class AppUsageChart extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
+    if (appData.isEmpty) {
+      return _buildNoDataWidget(screenWidth, screenHeight);
+    }
+
     return Column(
       children: appData.map((app) =>
           Padding(
@@ -171,6 +198,37 @@ class AppUsageChart extends StatelessWidget {
             child: _buildAppUsageBar(context, app, screenWidth, screenHeight),
           ),
       ).toList(),
+    );
+  }
+
+  /// Build widget for when no app data is available
+  Widget _buildNoDataWidget(double screenWidth, double screenHeight) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(screenWidth * 0.05),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.apps,
+            color: Colors.white.withOpacity(0.5),
+            size: screenWidth * 0.1,
+          ),
+          SizedBox(height: screenHeight * 0.01),
+          Text(
+            'No app usage data available',
+            style: TextStyle(
+              fontFamily: 'Jost',
+              fontSize: screenWidth * 0.04,
+              color: Colors.white.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
@@ -217,7 +275,7 @@ class AppUsageChart extends StatelessWidget {
                     ),
                     // Actual usage bar
                     FractionallySizedBox(
-                      widthFactor: app.percentage / 15, // Adjust based on max percentage for scaling
+                      widthFactor: app.percentage / 100, // Use actual percentage
                       child: Container(
                         height: 20,
                         decoration: BoxDecoration(
@@ -235,7 +293,7 @@ class AppUsageChart extends StatelessWidget {
 
         SizedBox(width: screenWidth * 0.02),
 
-        // App icon placeholder - FIXED: No asset loading, just colored placeholder
+        // App icon - Real app icon placeholder
         Container(
           width: 24,
           height: 24,
@@ -243,22 +301,25 @@ class AppUsageChart extends StatelessWidget {
             color: app.color,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Icon(
-            _getAppIcon(app.appName),
-            color: Colors.white,
-            size: 16,
+
+          child: FutureBuilder<Application?>(
+            future: DeviceApps.getApp(app.packageName, true),
+            builder: (context, snapshot) {
+              if (snapshot.hasData && snapshot.data is ApplicationWithIcon) {
+                return Image.memory((snapshot.data as ApplicationWithIcon).icon);
+              }
+              return getAppIconWidget(app.packageName.toLowerCase());
+            },
           ),
-          // TODO: Replace with actual app icons later
-          // child: Image.asset('assets/images/${app.appName.toLowerCase()}_icon.png'),
         ),
 
         SizedBox(width: screenWidth * 0.02),
 
-        // Time spent - FIXED: Using flexible to prevent overflow
+        // Time spent - Using real data
         SizedBox(
           width: screenWidth * 0.15,
           child: Text(
-            app.timeSpent,
+            app.timeSpent, // Real usage time
             style: TextStyle(
               fontFamily: 'Jost',
               fontSize: screenWidth * 0.035,
@@ -272,19 +333,25 @@ class AppUsageChart extends StatelessWidget {
     );
   }
 
-  // Helper method to get appropriate icons for each app
-  IconData _getAppIcon(String appName) {
-    switch (appName.toLowerCase()) {
-      case 'twitter':
-        return Icons.alternate_email;
-      case 'spotify':
-        return Icons.music_note;
-      case 'youtube':
-        return Icons.play_circle_filled;
-      case 'netflix':
-        return Icons.movie;
-      default:
-        return Icons.apps;
+  // Helper method to get appropriate icons for each app based on package name
+  Widget getAppIconWidget(String packageLower) {
+    if (packageLower.contains('twitter') || packageLower.contains('x')) {
+      return Image.asset('assets/images/twitter.png', width: 24, height: 24);
+    } else if (packageLower.contains('spotify') || packageLower.contains('music')) {
+      return Image.asset('assets/images/spotify.png', width: 24, height: 24);
+    } else if (packageLower.contains('youtube')) {
+      return Image.asset('assets/images/youtube.png', width: 24, height: 24);
+    }
+    else if (packageLower.contains('telegram')) {
+      return Image.asset('assets/images/telegram.png', width: 24, height: 24);
+    }else if (packageLower.contains('instagram')) {
+      return Image.asset('assets/images/instagram.png', width: 24, height: 24);
+    }else if (packageLower.contains('youtube')) {
+      return Image.asset('assets/images/youtube.png', width: 24, height: 24);
+    }
+    // ... بقیه موارد
+    else {
+      return Image.asset('assets/image/default.png', width: 24, height: 24);
     }
   }
 }
@@ -313,12 +380,14 @@ class ScreenTimeComparisonCard extends StatelessWidget {
   final String comparisonText;
   final String userTime;
   final bool isLowerThanPeers;
+  final double usagePercentage;
 
   const ScreenTimeComparisonCard({
     super.key,
     required this.comparisonText,
     required this.userTime,
     required this.isLowerThanPeers,
+    this.usagePercentage = 50.0,
   });
 
   @override
@@ -346,9 +415,17 @@ class ScreenTimeComparisonCard extends StatelessWidget {
           // Fire icon and title
           Row(
             children: [
-              const Icon(
-                Icons.local_fire_department,
-                color: Color(0xFFFF6B35),
+              Icon(
+                usagePercentage < 60
+                    ? Icons.local_fire_department
+                    : usagePercentage < 100
+                    ? Icons.warning_amber
+                    : Icons.error,
+                color: usagePercentage < 60
+                    ? const Color(0xFF98C897) // Green for good
+                    : usagePercentage < 100
+                    ? const Color(0xFFFFC000) // Yellow for moderate
+                    : const Color(0xFFFF6B35), // Red for high
                 size: 24,
               ),
               SizedBox(width: screenWidth * 0.02),
@@ -358,7 +435,11 @@ class ScreenTimeComparisonCard extends StatelessWidget {
                   fontFamily: 'Jost',
                   fontSize: screenWidth * 0.045,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFFFF6B35),
+                  color: usagePercentage < 60
+                      ? const Color(0xFF98C897)
+                      : usagePercentage < 100
+                      ? const Color(0xFFFFC000)
+                      : const Color(0xFFFF6B35),
                 ),
               ),
             ],
@@ -366,9 +447,9 @@ class ScreenTimeComparisonCard extends StatelessWidget {
 
           SizedBox(height: screenHeight * 0.02),
 
-          // Comparison text
+          // Comparison text with real data
           Text(
-            comparisonText,
+            comparisonText, // Real motivational message
             style: TextStyle(
               fontFamily: 'Jost',
               fontSize: screenWidth * 0.04,
@@ -380,21 +461,34 @@ class ScreenTimeComparisonCard extends StatelessWidget {
 
           SizedBox(height: screenHeight * 0.02),
 
-          // Horizontal comparison graph - FIXED: Proper spacing and overflow handling
+          // Horizontal comparison graph with real percentage
           _buildComparisonGraph(screenWidth, screenHeight),
 
           SizedBox(height: screenHeight * 0.01),
 
-          // "You" label
+          // User label with real screen time
           Center(
-            child: Text(
-              'You',
-              style: TextStyle(
-                fontFamily: 'Jost',
-                fontSize: screenWidth * 0.035,
-                fontWeight: FontWeight.w400,
-                color: Colors.white.withOpacity(0.7),
-              ),
+            child: Column(
+              children: [
+                Text(
+                  'You',
+                  style: TextStyle(
+                    fontFamily: 'Jost',
+                    fontSize: screenWidth * 0.035,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                ),
+                Text(
+                  userTime, // Real user time
+                  style: TextStyle(
+                    fontFamily: 'Jost',
+                    fontSize: screenWidth * 0.03,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white.withOpacity(0.5),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -412,28 +506,43 @@ class ScreenTimeComparisonCard extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final availableWidth = constraints.maxWidth;
-          final barCount = (availableWidth / 3).floor(); // Calculate bars that fit
+          final barCount = (availableWidth / 3).floor();
+
+          // Calculate position based on real usage percentage
+          final positionRatio = (usagePercentage / 200).clamp(0.0, 1.0); // 200% is max
+          final markerPosition = (availableWidth * positionRatio).clamp(0.0, availableWidth - 2);
 
           return Stack(
             children: [
-              // Background bars (representing time segments) - FIXED: Dynamic bar count
+              // Background bars representing time segments
               Row(
-                children: List.generate(barCount, (index) =>
-                    Container(
-                      width: (availableWidth - (barCount - 1)) / barCount,
-                      height: 8,
-                      margin: EdgeInsets.only(right: index < barCount - 1 ? 1 : 0),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF98C897).withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                children: List.generate(barCount, (index) {
+                  final barPosition = index / barCount;
+                  Color barColor;
+
+                  if (barPosition < 0.3) {
+                    barColor = const Color(0xFF98C897).withOpacity(0.6); // Green zone
+                  } else if (barPosition < 0.5) {
+                    barColor = const Color(0xFFFFC000).withOpacity(0.6); // Yellow zone
+                  } else {
+                    barColor = const Color(0xFFFF6B35).withOpacity(0.6); // Red zone
+                  }
+
+                  return Container(
+                    width: (availableWidth - (barCount - 1)) / barCount,
+                    height: 8,
+                    margin: EdgeInsets.only(right: index < barCount - 1 ? 1 : 0),
+                    decoration: BoxDecoration(
+                      color: barColor,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                ),
+                  );
+                }),
               ),
 
-              // User position marker - FIXED: Proper positioning within bounds
+              // User position marker at real position
               Positioned(
-                left: (availableWidth * 0.3).clamp(0.0, availableWidth - 2),
+                left: markerPosition,
                 child: Container(
                   width: 2,
                   height: 8,

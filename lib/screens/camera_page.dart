@@ -25,7 +25,6 @@ class _Page2State extends State<Page2> {
           builder: (context, constraints) {
             return Stack(
               children: [
-                // Shiny spots overlay image - ADD YOUR SHINY SPOTS OVERLAY IMAGE HERE
                 Positioned.fill(
                   child: Image.asset(
                     'assets/images/background.png',
@@ -52,10 +51,6 @@ class _Page2State extends State<Page2> {
                               child: SizedBox(
                                 width: 40,
                                 height: 40,
-                                // decoration: BoxDecoration(
-                                //   color: Colors.white.withOpacity(0.1),
-                                //   borderRadius: BorderRadius.circular(8),
-                                // ),
                                 child: const Icon(
                                   Icons.arrow_back,
                                   color: Colors.white,
