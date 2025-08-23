@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/usage_provider.dart';
 import 'screens/splash_screen.dart';
+import 'services/reminder_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,12 +16,19 @@ class EyesMateApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Global navigator key for overlays
+    final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+    // Initialize reminder service with navigator key
+    ReminderService.initialize(navKey: navigatorKey);
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UsageProvider()),
         // اگه Provider دیگه هم خواستی اضافه کن
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey, // Important: provide the navigator key
         title: 'EyesMate',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
@@ -28,7 +36,7 @@ class EyesMateApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           scaffoldBackgroundColor: const Color(0xFF011222),
         ),
-        home: const SplashScreen(), // همون فلوی خودت
+        home: const SplashScreen(),
       ),
     );
   }

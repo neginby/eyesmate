@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class OverlayNotificationReminder extends StatelessWidget {
+class OverlayNotificationCamera extends StatelessWidget {
   // final String title;
   // final String subtitle;
   // final VoidCallback? onDismiss;

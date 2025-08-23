@@ -20,6 +20,12 @@ dependencies:
   # Device Apps (for app names and icons)
   device_apps: ^2.2.0
 
+  flutter_overlay_window: ^0.4.5
+  permission_handler: ^11.0.1
+  workmanager:
+    path: C:/Users/Zhivar/flutter_workmanager/workmanager
+
+
 
 dev_dependencies:
   flutter_test:

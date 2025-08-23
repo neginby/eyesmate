@@ -1,37 +1,29 @@
 import 'package:flutter/material.dart';
 
-class OverlayNotificationCamera extends StatelessWidget {
-  // final String title;
-  // final String subtitle;
-  // final VoidCallback? onDismiss;
-
-  // const OverlayNotificationCamera({
-  //   super.key,
-  //   required this.title,
-  //   required this.subtitle,
-  //   this.onDismiss,
-  // });
+class OverlayNotificationReminder extends StatelessWidget {
+  const OverlayNotificationReminder({super.key});
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return Positioned.fill(
-      child: Material(
-        color: const Color(0x000c1c74).withOpacity(0.67),
+    return Material(
+      color: const Color(0x000c1c74).withOpacity(0.67),
+      child: Container(
+        width: screenWidth,
+        height: screenHeight,
         child: Stack(
           children: [
-            // Background overlay with shine spots
-            SizedBox(
+            // Background overlay
+            Container(
               width: double.infinity,
               height: double.infinity,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Image.asset('assets/images/background.png'),
-                  ),
-                ],
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/background.png'),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
 
@@ -44,7 +36,7 @@ class OverlayNotificationCamera extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Character/Icon placeholder - different style
+                    // Character/Icon
                     SizedBox(
                       width: screenWidth * 0.4,
                       height: screenWidth * 0.4,
@@ -52,10 +44,27 @@ class OverlayNotificationCamera extends StatelessWidget {
                         child: Image.asset(
                           'assets/images/style.png',
                           fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback if image not found
+                            return Container(
+                              width: screenWidth * 0.4,
+                              height: screenWidth * 0.4,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF98C897),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Icon(
+                                Icons.visibility_off,
+                                color: Colors.white,
+                                size: 80,
+                              ),
+                            );
+                          },
                         ),
-
                       ),
                     ),
+
+                    const SizedBox(height: 20),
 
                     // Title
                     Text(
@@ -88,32 +97,33 @@ class OverlayNotificationCamera extends StatelessWidget {
                         ),
                       ),
                     ),
+
+                    const SizedBox(height: 30),
+
+                    // Progress indicator or countdown (optional)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Text(
+                        "Rest your eyes...",
+                        style: TextStyle(
+                          fontFamily: 'Jost',
+                          fontSize: screenWidth * 0.04,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
-
-            // Close button (optional)
-            // if (onDismiss != null)
-              Positioned(
-                top: 60,
-                right: 20,
-                child: GestureDetector(
-                  // onTap: onDismiss,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Icon(
-                      Icons.close,
-                      color: Colors.white.withOpacity(0.8),
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

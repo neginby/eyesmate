@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import '../services/reminder_service.dart';
 
 class Page1 extends StatefulWidget {
   const Page1({super.key});
@@ -13,6 +14,122 @@ class _Page1State extends State<Page1> {
   int selectedMinutes = 20;
   int selectedSeconds = 20;
   bool isReminderEnabled = true;
+  bool _isLoading = false; // For loading states
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedSettings();
+  }
+
+  // Load saved settings from SharedPreferences
+  Future<void> _loadSavedSettings() async {
+    final settings = await ReminderService.getSavedSettings();
+    final isEnabled = await ReminderService.isReminderEnabled();
+
+    setState(() {
+      selectedSeconds = settings['rest_duration'] ?? 20;
+      selectedMinutes = settings['interval'] ?? 20;
+      isReminderEnabled = isEnabled;
+    });
+  }
+
+  // Handle reminder toggle
+  Future<void> _handleReminderToggle(bool value) async {
+    setState(() {
+      _isLoading = true;
+      isReminderEnabled = value;
+    });
+
+    try {
+      if (value) {
+        // Start reminders
+        await ReminderService.startReminders(
+          restDurationSeconds: selectedSeconds,
+          intervalMinutes: selectedMinutes,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Reminders started! You\'ll get notified every $selectedMinutes minutes for $selectedSeconds seconds.',
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: const Color(0xFF98C897),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        // Stop reminders
+        await ReminderService.stopReminders();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Reminders stopped.',
+                style: TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Color(0xFF8B83B6),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Handle errors
+      setState(() {
+        isReminderEnabled = !value; // Revert the toggle
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Test button handler
+  Future<void> _testOverlay() async {
+    try {
+      await ReminderService.showTestOverlay(durationSeconds: 5);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Test overlay shown for 5 seconds!',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Color(0xFF98C897),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Test failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +143,7 @@ class _Page1State extends State<Page1> {
           builder: (context, constraints) {
             return Stack(
               children: [
-                // پس‌زمینه
+                // Background
                 Container(
                   decoration: const BoxDecoration(
                     image: DecorationImage(
@@ -36,7 +153,7 @@ class _Page1State extends State<Page1> {
                   ),
                 ),
 
-                // محتوای صفحه
+                // Main content
                 SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
@@ -45,7 +162,7 @@ class _Page1State extends State<Page1> {
                     ),
                     child: Column(
                       children: [
-                        // logo and name
+                        // Logo and name
                         Center(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -74,13 +191,13 @@ class _Page1State extends State<Page1> {
 
                         SizedBox(height: screenHeight * 0.06),
 
-                        // circular timer
+                        // Circular timer
                         SizedBox(
                           height: screenHeight * 0.4,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              // outer circle min
+                              // Outer circle (minutes)
                               CircularTimer(
                                 radius: screenWidth * 0.43,
                                 strokeWidth: 20,
@@ -91,11 +208,15 @@ class _Page1State extends State<Page1> {
                                   setState(() {
                                     selectedMinutes = value;
                                   });
+                                  // Update reminders if enabled
+                                  if (isReminderEnabled && !_isLoading) {
+                                    _handleReminderToggle(true);
+                                  }
                                 },
                                 showTicks: true,
                                 handleAsset: 'assets/images/eye_break_icon.png',
                               ),
-                              // inner circle sec
+                              // Inner circle (seconds)
                               CircularTimer(
                                 radius: screenWidth * 0.29,
                                 strokeWidth: 15,
@@ -106,6 +227,10 @@ class _Page1State extends State<Page1> {
                                   setState(() {
                                     selectedSeconds = value;
                                   });
+                                  // Update reminders if enabled
+                                  if (isReminderEnabled && !_isLoading) {
+                                    _handleReminderToggle(true);
+                                  }
                                 },
                                 showTicks: false,
                                 handleAsset: 'assets/images/eye_break_icon.png',
@@ -116,7 +241,7 @@ class _Page1State extends State<Page1> {
 
                         SizedBox(height: screenHeight * 0.06),
 
-                        // show valuse
+                        // Show values
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
@@ -137,12 +262,17 @@ class _Page1State extends State<Page1> {
 
                         SizedBox(height: screenHeight * 0.05),
 
-                        // reminder switch
+                        // Reminder switch
                         _buildReminderToggle(screenWidth, screenHeight),
+
+                        SizedBox(height: screenHeight * 0.03),
+
+                        // Test button
+                        _buildTestButton(screenWidth, screenHeight),
 
                         SizedBox(height: screenHeight * 0.04),
 
-                        // متن قانون 20-20-20
+                        // 20-20-20 rule text
                         Container(
                           padding: EdgeInsets.all(screenWidth * 0.04),
                           decoration: BoxDecoration(
@@ -173,7 +303,7 @@ class _Page1State extends State<Page1> {
                   ),
                 ),
 
-                // back bottom
+                // Back button
                 Positioned(
                   top: 8,
                   left: 8,
@@ -247,13 +377,20 @@ class _Page1State extends State<Page1> {
           ),
         ),
         SizedBox(width: screenWidth * 0.03),
-        Switch(
+        _isLoading
+            ? SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              const Color(0xFF98C897),
+            ),
+          ),
+        )
+            : Switch(
           value: isReminderEnabled,
-          onChanged: (value) {
-            setState(() {
-              isReminderEnabled = value;
-            });
-          },
+          onChanged: _handleReminderToggle,
           activeColor: const Color(0xFF98C897),
           inactiveThumbColor: const Color(0xFF5B5B82),
           inactiveTrackColor: const Color(0xFF313050),
@@ -261,8 +398,41 @@ class _Page1State extends State<Page1> {
       ],
     );
   }
+
+  Widget _buildTestButton(double screenWidth, double screenHeight) {
+    return ElevatedButton(
+      onPressed: _testOverlay,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF8B83B6),
+        foregroundColor: Colors.white,
+        padding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.08,
+          vertical: screenHeight * 0.015,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(25),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.visibility, size: 20),
+          SizedBox(width: screenWidth * 0.02),
+          Text(
+            'Test Overlay',
+            style: TextStyle(
+              fontFamily: 'Jost',
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+// Your existing CircularTimer classes remain the same...
 class CircularTimer extends StatefulWidget {
   final double radius;
   final double strokeWidth;
@@ -390,10 +560,10 @@ class CircularTimerPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
-    // background circle
+    // Background circle
     canvas.drawCircle(center, radius - strokeWidth / 2, paint);
 
-    // filled
+    // Filled arc
     paint.color = color;
     paint.strokeCap = StrokeCap.round;
 
@@ -406,12 +576,12 @@ class CircularTimerPainter extends CustomPainter {
       paint,
     );
 
-    // شیارها (فقط اگر showTicks فعال باشه)
+    // Draw tick marks (only if showTicks is true)
     if (showTicks) {
       _drawTickMarks(canvas, center);
     }
 
-    // دسته
+    // Draw handle
     _drawHandle(canvas, center, sweepAngle);
   }
 
