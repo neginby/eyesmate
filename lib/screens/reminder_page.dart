@@ -43,6 +43,20 @@ class _Page1State extends State<Page1> {
 
     try {
       if (value) {
+        // Check overlay permission first
+        bool hasPermission = await ReminderService.checkOverlayPermission();
+
+        if (!hasPermission) {
+          // Show permission dialog
+          // if (mounted) {
+          //   _showPermissionDialog();
+          // }
+          setState(() {
+            isReminderEnabled = false;
+          });
+          return;
+        }
+
         // Start reminders
         await ReminderService.startReminders(
           restDurationSeconds: selectedSeconds,
@@ -53,11 +67,11 @@ class _Page1State extends State<Page1> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Reminders started! You\'ll get notified every $selectedMinutes minutes for $selectedSeconds seconds.',
+                'System-wide reminders started! You\'ll get notifications every $selectedMinutes minutes for $selectedSeconds seconds, even when using other apps.',
                 style: const TextStyle(color: Colors.white),
               ),
               backgroundColor: const Color(0xFF98C897),
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -105,17 +119,25 @@ class _Page1State extends State<Page1> {
   // Test button handler
   Future<void> _testOverlay() async {
     try {
+      // Check permission first
+      bool hasPermission = await ReminderService.checkOverlayPermission();
+
+      // if (!hasPermission) {
+      //   _showPermissionDialog();
+      //   return;
+      // }
+
       await ReminderService.showTestOverlay(durationSeconds: 5);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Test overlay shown for 5 seconds!',
+              'Test system overlay shown for 5 seconds! This works even when app is in background. Try pressing home button.',
               style: TextStyle(color: Colors.white),
             ),
             backgroundColor: Color(0xFF98C897),
-            duration: Duration(seconds: 2),
+            duration: Duration(seconds: 4),
           ),
         );
       }
@@ -125,11 +147,161 @@ class _Page1State extends State<Page1> {
           SnackBar(
             content: Text('Test failed: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
     }
   }
+  //
+  // // Show permission dialog
+  // void _showPermissionDialog() {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false, // User must make a choice
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         backgroundColor: const Color(0xFF313050),
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(16),
+  //         ),
+  //         title: Row(
+  //           children: [
+  //             Icon(
+  //               Icons.security,
+  //               color: const Color(0xFF98C897),
+  //               size: 28,
+  //             ),
+  //             const SizedBox(width: 10),
+  //             const Text(
+  //               'Permission Required',
+  //               style: TextStyle(
+  //                 color: Colors.white,
+  //                 fontWeight: FontWeight.w600,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             const Text(
+  //               'To show break reminders even when you\'re using other apps, EyesMate needs permission to "Display over other apps".',
+  //               style: TextStyle(
+  //                 color: Colors.white70,
+  //                 height: 1.4,
+  //               ),
+  //             ),
+  //             const SizedBox(height: 15),
+  //             Container(
+  //               padding: const EdgeInsets.all(12),
+  //               decoration: BoxDecoration(
+  //                 color: const Color(0xFF98C897).withOpacity(0.1),
+  //                 borderRadius: BorderRadius.circular(8),
+  //                 border: Border.all(
+  //                   color: const Color(0xFF98C897).withOpacity(0.3),
+  //                 ),
+  //               ),
+  //               child: const Row(
+  //                 children: [
+  //                   Icon(
+  //                     Icons.info_outline,
+  //                     color: Color(0xFF98C897),
+  //                     size: 20,
+  //                   ),
+  //                   SizedBox(width: 8),
+  //                   Expanded(
+  //                     child: Text(
+  //                       'This allows reminders to work while using Instagram, WhatsApp, games, etc.',
+  //                       style: TextStyle(
+  //                         color: Color(0xFF98C897),
+  //                         fontSize: 13,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () {
+  //               Navigator.of(context).pop();
+  //               // Reset the toggle since permission wasn't granted
+  //               setState(() {
+  //                 isReminderEnabled = false;
+  //               });
+  //             },
+  //             child: const Text(
+  //               'Cancel',
+  //               style: TextStyle(color: Colors.grey),
+  //             ),
+  //           ),
+  //           ElevatedButton(
+  //             onPressed: () async {
+  //               Navigator.of(context).pop();
+  //
+  //               // Show loading while requesting permission
+  //               if (mounted) {
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   const SnackBar(
+  //                     content: Text(
+  //                       'Opening permission settings...',
+  //                       style: TextStyle(color: Colors.white),
+  //                     ),
+  //                     backgroundColor: Color(0xFF8B83B6),
+  //                     duration: Duration(seconds: 2),
+  //                   ),
+  //                 );
+  //               }
+  //
+  //               // Try to request permission again
+  //               bool granted = await ReminderService.checkOverlayPermission();
+  //
+  //               if (granted && mounted) {
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   const SnackBar(
+  //                     content: Text(
+  //                       'Permission granted! You can now enable reminders.',
+  //                       style: TextStyle(color: Colors.white),
+  //                     ),
+  //                     backgroundColor: Color(0xFF98C897),
+  //                     duration: Duration(seconds: 3),
+  //                   ),
+  //                 );
+  //               } else if (mounted) {
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   const SnackBar(
+  //                     content: Text(
+  //                       'Permission not granted. Reminders will only work inside the app.',
+  //                       style: TextStyle(color: Colors.white),
+  //                     ),
+  //                     backgroundColor: Colors.orange,
+  //                     duration: Duration(seconds: 3),
+  //                   ),
+  //                 );
+  //                 // Reset toggle
+  //                 setState(() {
+  //                   isReminderEnabled = false;
+  //                 });
+  //               }
+  //             },
+  //             style: ElevatedButton.styleFrom(
+  //               backgroundColor: const Color(0xFF98C897),
+  //               foregroundColor: Colors.white,
+  //               shape: RoundedRectangleBorder(
+  //                 borderRadius: BorderRadius.circular(8),
+  //               ),
+  //             ),
+  //             child: const Text('Grant Permission'),
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -419,7 +591,7 @@ class _Page1State extends State<Page1> {
           const Icon(Icons.visibility, size: 20),
           SizedBox(width: screenWidth * 0.02),
           Text(
-            'Test Overlay',
+            'Test System Overlay',
             style: TextStyle(
               fontFamily: 'Jost',
               fontSize: screenWidth * 0.04,

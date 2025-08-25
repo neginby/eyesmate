@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
+import 'overlay_service.dart';
 
 class ReminderService {
   static const String _reminderEnabledKey = 'reminder_enabled';
@@ -13,18 +14,13 @@ class ReminderService {
   static Timer? _periodicTimer;
   static bool _isOverlayActive = false;
 
-  // Global navigator key for showing overlays from anywhere
   static GlobalKey<NavigatorState>? navigatorKey;
 
   // Initialize the service
   static Future<void> initialize({GlobalKey<NavigatorState>? navKey}) async {
-    try {
-      navigatorKey = navKey;
-      await Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
-      print('ReminderService initialized successfully');
-    } catch (e) {
-      print('Error initializing reminder service: $e');
-    }
+    navigatorKey = navKey;
+    await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+    await SystemOverlayService.checkAndRequestPermission();
   }
 
   // Start the reminder system
@@ -32,100 +28,91 @@ class ReminderService {
     required int restDurationSeconds,
     required int intervalMinutes,
   }) async {
-    try {
-      await stopReminders(); // Stop any existing reminders
+    await stopReminders();
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_reminderEnabledKey, true);
-      await prefs.setInt(_restDurationKey, restDurationSeconds);
-      await prefs.setInt(_intervalKey, intervalMinutes);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_reminderEnabledKey, true);
+    await prefs.setInt(_restDurationKey, restDurationSeconds);
+    await prefs.setInt(_intervalKey, intervalMinutes);
 
-      // Start periodic timer for in-app reminders
-      _periodicTimer = Timer.periodic(
-          Duration(minutes: intervalMinutes),
-              (timer) {
-            if (navigatorKey?.currentContext != null) {
-              showReminderOverlay(restDurationSeconds);
-            }
-          }
-      );
+    bool hasPermission = await SystemOverlayService.checkAndRequestPermission();
+    if (!hasPermission) return;
 
-      // Also register background task for when app is closed
-      await Workmanager().registerPeriodicTask(
-        _taskName,
-        _taskName,
-        frequency: Duration(minutes: intervalMinutes.clamp(15, 999)), // Minimum 15 minutes for workmanager
-        initialDelay: Duration(minutes: intervalMinutes.clamp(15, 999)),
-        inputData: {
-          'rest_duration': restDurationSeconds,
-          'interval': intervalMinutes,
-        },
-      );
+    // Periodic reminders while app is open
+    _periodicTimer = Timer.periodic(
+      Duration(minutes: intervalMinutes),
+          (timer) async {
+        bool systemOverlayShown = await SystemOverlayService.showSystemOverlay(
+          durationSeconds: restDurationSeconds,
+          isTest: false,
+        );
+        if (!systemOverlayShown && navigatorKey?.currentContext != null) {
+          showInAppReminderOverlay(restDurationSeconds);
+        }
+      },
+    );
 
-      print('Reminders started: Every $intervalMinutes minutes, rest for $restDurationSeconds seconds');
-    } catch (e) {
-      print('Error starting reminders: $e');
-      rethrow;
-    }
+    // Background reminders
+    await Workmanager().registerPeriodicTask(
+      _taskName,
+      _taskName,
+      frequency: Duration(minutes: intervalMinutes.clamp(15, 999)),
+      initialDelay: Duration(minutes: intervalMinutes.clamp(15, 999)),
+      inputData: {
+        'rest_duration': restDurationSeconds,
+        'interval': intervalMinutes,
+      },
+    );
   }
 
   // Stop the reminder system
   static Future<void> stopReminders() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_reminderEnabledKey, false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_reminderEnabledKey, false);
 
-      await Workmanager().cancelByUniqueName(_taskName);
-      _timer?.cancel();
-      _periodicTimer?.cancel();
-      _timer = null;
-      _periodicTimer = null;
+    await Workmanager().cancelByUniqueName(_taskName);
+    _timer?.cancel();
+    _periodicTimer?.cancel();
+    _timer = null;
+    _periodicTimer = null;
 
-      // Close overlay if active
-      if (_isOverlayActive && navigatorKey?.currentContext != null) {
-        Navigator.of(navigatorKey!.currentContext!).pop();
-        _isOverlayActive = false;
-      }
+    await SystemOverlayService.closeSystemOverlay();
 
-      print('Reminders stopped');
-    } catch (e) {
-      print('Error stopping reminders: $e');
+    if (_isOverlayActive && navigatorKey?.currentContext != null) {
+      Navigator.of(navigatorKey!.currentContext!).pop();
+      _isOverlayActive = false;
     }
   }
 
-  // Show overlay for testing
+  // Show test overlay
   static Future<void> showTestOverlay({int durationSeconds = 5}) async {
-    if (_isOverlayActive || navigatorKey?.currentContext == null) {
-      print('Cannot show test overlay - overlay active or no context');
-      return;
-    }
-
-    try {
-      print('Showing test overlay for $durationSeconds seconds');
-      _showOverlayDialog(durationSeconds);
-    } catch (e) {
-      print('Error showing test overlay: $e');
-      rethrow;
+    bool success = await SystemOverlayService.showSystemOverlay(
+      durationSeconds: durationSeconds,
+      isTest: true,
+    );
+    if (!success && navigatorKey?.currentContext != null) {
+      showInAppReminderOverlay(durationSeconds);
     }
   }
 
-  // Show the actual reminder overlay
+  // Show system reminder overlay
   static Future<void> showReminderOverlay(int durationSeconds) async {
-    if (_isOverlayActive || navigatorKey?.currentContext == null) {
-      print('Cannot show reminder overlay - overlay active or no context');
-      return;
-    }
-
-    try {
-      print('Showing reminder overlay for $durationSeconds seconds');
-      _showOverlayDialog(durationSeconds);
-    } catch (e) {
-      print('Error showing reminder overlay: $e');
+    bool success = await SystemOverlayService.showSystemOverlay(
+      durationSeconds: durationSeconds,
+      isTest: false,
+    );
+    if (!success && navigatorKey?.currentContext != null) {
+      showInAppReminderOverlay(durationSeconds);
     }
   }
 
-  // Internal method to show the overlay dialog
-  static void _showOverlayDialog(int durationSeconds) {
+  // In-app overlay
+  static Future<void> showInAppReminderOverlay(int durationSeconds) async {
+    if (_isOverlayActive || navigatorKey?.currentContext == null) return;
+    _showInAppOverlayDialog(durationSeconds);
+  }
+
+  static void _showInAppOverlayDialog(int durationSeconds) {
     if (navigatorKey?.currentContext == null) return;
 
     _isOverlayActive = true;
@@ -133,210 +120,148 @@ class ReminderService {
     showDialog(
       context: navigatorKey!.currentContext!,
       barrierDismissible: false,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false, // Prevent back button dismiss
-        child: const ReminderOverlayWidget(),
-      ),
+      builder: (context) => const OverlayNotificationReminder(),
     );
 
-    // Auto-close after duration
     _timer = Timer(Duration(seconds: durationSeconds), () {
       if (_isOverlayActive && navigatorKey?.currentContext != null) {
-        try {
-          Navigator.of(navigatorKey!.currentContext!).pop();
-          _isOverlayActive = false;
-          _timer = null;
-          print('Overlay closed automatically after $durationSeconds seconds');
-        } catch (e) {
-          print('Error closing overlay: $e');
-        }
+        Navigator.of(navigatorKey!.currentContext!).pop();
+        _isOverlayActive = false;
+        _timer = null;
       }
     });
   }
 
-  // Check if reminders are enabled
   static Future<bool> isReminderEnabled() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(_reminderEnabledKey) ?? false;
-    } catch (e) {
-      print('Error checking reminder enabled: $e');
-      return false;
-    }
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_reminderEnabledKey) ?? false;
   }
 
-  // Get saved settings
   static Future<Map<String, int>> getSavedSettings() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return {
-        'rest_duration': prefs.getInt(_restDurationKey) ?? 20,
-        'interval': prefs.getInt(_intervalKey) ?? 20,
-      };
-    } catch (e) {
-      print('Error getting saved settings: $e');
-      return {
-        'rest_duration': 20,
-        'interval': 20,
-      };
-    }
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'rest_duration': prefs.getInt(_restDurationKey) ?? 20,
+      'interval': prefs.getInt(_intervalKey) ?? 20,
+    };
+  }
+
+  static Future<bool> checkOverlayPermission() async {
+    return await SystemOverlayService.checkAndRequestPermission();
   }
 }
 
-// Reminder Overlay Widget
-class ReminderOverlayWidget extends StatelessWidget {
-  const ReminderOverlayWidget({super.key});
+// In-app overlay design
+class OverlayNotificationReminder extends StatelessWidget {
+  const OverlayNotificationReminder({super.key});
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return Scaffold(
-      backgroundColor: const Color(0x000c1c74).withOpacity(0.67),
-      body: Container(
+    return Material(
+      color: const Color(0x000c1c74).withOpacity(0.67),
+      child: Container(
         width: screenWidth,
         height: screenHeight,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/background.png'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Center(
-          child: Container(
-            margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Character/Icon
-                SizedBox(
-                  width: screenWidth * 0.4,
-                  height: screenWidth * 0.4,
-                  child: Center(
-                    child: Image.asset(
-                      'assets/images/style.png',
-                      fit: BoxFit.contain,
-                      // errorBuilder: (context, error, stackTrace) {
-                      //   return const Icon(
-                      //     Icons.visibility_off,
-                      //     color: Colors.white,
-                      //     size: 80,
-                      //   );
-                      // },
-                    ),
-                  ),
+        child: Stack(
+          children: [
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/background.png'),
+                  fit: BoxFit.cover,
                 ),
-
-                const SizedBox(height: 30),
-
-                // Title
-                Text(
-                  "Take a short break!",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Jost',
-                    fontSize: screenWidth * 0.065,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    height: 1.2,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-
-                const SizedBox(height: 15),
-
-                // Subtitle
-                Text(
-                  "Continuous screen time can cause eye strain.\nLook away for 20 seconds.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Jost',
-                    fontSize: screenWidth * 0.038,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white.withOpacity(0.85),
-                    height: 1.4,
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // Rest message
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 15,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    "Rest your eyes...",
-                    style: TextStyle(
-                      fontFamily: 'Jost',
-                      fontSize: screenWidth * 0.04,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // Close button (optional - can be removed for mandatory break)
-                // ElevatedButton(
-                //   onPressed: () {
-                //     Navigator.of(context).pop();
-                //     ReminderService._isOverlayActive = false;
-                //   },
-                //   style: ElevatedButton.styleFrom(
-                //     backgroundColor: const Color(0xFF8B83B6),
-                //     foregroundColor: Colors.white,
-                //     padding: EdgeInsets.symmetric(
-                //       horizontal: screenWidth * 0.08,
-                //       vertical: 12,
-                //     ),
-                //     shape: RoundedRectangleBorder(
-                //       borderRadius: BorderRadius.circular(25),
-                //     ),
-                //   ),
-                //   child: Text(
-                //     'Got it',
-                //     style: TextStyle(
-                //       fontFamily: 'Jost',
-                //       fontSize: screenWidth * 0.04,
-                //       fontWeight: FontWeight.w600,
-                //     ),
-                //   ),
-                // ),
-              ],
+              ),
             ),
-          ),
+            Center(
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: screenWidth * 0.4,
+                      height: screenWidth * 0.4,
+                      child: Center(
+                        child: Image.asset(
+                          'assets/images/style.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      "Take a short break!",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Jost',
+                        fontSize: screenWidth * 0.065,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        height: 1.2,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        "Continuous screen time can cause eye strain.\nLook away for few seconds.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Jost',
+                          fontSize: screenWidth * 0.038,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.white.withOpacity(0.85),
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Text(
+                        "Rest your eyes...",
+                        style: TextStyle(
+                          fontFamily: 'Jost',
+                          fontSize: screenWidth * 0.04,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// Background task callback (simplified)
+// Background task callback
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    try {
-      print('Background task executing: $task');
-      // For background tasks, we'll just log - the in-app timer handles the overlays
-      if (task == 'eyesmate_reminder') {
-        print('Background reminder triggered - app should handle this when active');
-      }
-      return Future.value(true);
-    } catch (e) {
-      print('Background task error: $e');
-      return Future.value(false);
+    if (task == 'eyesmate_reminder') {
+      final restDuration = inputData?['rest_duration'] ?? 20;
+      await SystemOverlayService.showSystemOverlay(
+        durationSeconds: restDuration,
+        isTest: false,
+      );
     }
+    return Future.value(true);
   });
 }
