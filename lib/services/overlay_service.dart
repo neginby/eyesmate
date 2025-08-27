@@ -98,15 +98,12 @@ class BreakReminderOverlay extends StatefulWidget {
 }
 
 class _BreakReminderOverlayState extends State<BreakReminderOverlay> {
-  int _remainingSeconds = 20;
   String _title = "Take a short break!";
   String _message = "Continuous screen time can cause eye strain.\nLook away for few seconds.";
-  bool _isTest = false;
 
   @override
   void initState() {
     super.initState();
-    _startCountdown();
     _setupFullScreen();
   }
 
@@ -115,19 +112,6 @@ class _BreakReminderOverlayState extends State<BreakReminderOverlay> {
       SystemUiMode.immersiveSticky,
       overlays: [],
     );
-  }
-
-  void _startCountdown() {
-    if (_remainingSeconds > 0) {
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted && _remainingSeconds > 0) {
-          setState(() {
-            _remainingSeconds--;
-          });
-          _startCountdown();
-        }
-      });
-    }
   }
 
   @override

@@ -1,5 +1,3 @@
-// File: /lib/screens/sign_in_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home_page.dart';
@@ -113,21 +111,10 @@ class _SignInScreenState extends State<SignInScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Container(
+                                  SizedBox(
                                     width: 40,
                                     height: 40,
-                                    // decoration: BoxDecoration(
-                                    //   color: const Color(0xFFB0B0B0).withOpacity(0.2),
-                                    //   shape: BoxShape.circle,
-                                    // ),
-                                    // Use your logo image instead of the Icon
                                     child: Image.asset('assets/images/icon1.png'),
-                                    // TODO: If image doesn't work, replace with Icon:
-                                    // child: const Icon(
-                                    //   Icons.visibility,
-                                    //   color: Color(0xFFB0B0B0),
-                                    //   size: 24,
-                                    // ),
                                   ),
 
                                   SizedBox(width: screenWidth * 0.03),
@@ -146,7 +133,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
                               SizedBox(height: screenHeight * 0.08),
 
-                              // Welcome text
                               Text(
                                 'welcome to EyesMate',
                                 style: TextStyle(

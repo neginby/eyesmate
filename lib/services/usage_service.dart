@@ -1,6 +1,4 @@
-// lib/services/usage_service.dart
 import 'dart:ui';
-
 import 'package:app_usage/app_usage.dart';
 import 'package:device_apps/device_apps.dart';
 import '../models/usage_models.dart';
@@ -229,6 +227,56 @@ class UsageService {
       case 2: return '${day}nd';
       case 3: return '${day}rd';
       default: return '${day}th';
+    }
+  }
+
+// calender part
+
+  /// گرفتن زمان استفاده برای تاریخ خاص
+  Future<Duration> getScreenTimeForDate(DateTime startDate, DateTime endDate) async {
+    try {
+      final usage = await AppUsage().getAppUsage(startDate, endDate);
+
+      Duration totalTime = Duration.zero;
+      for (final app in usage) {
+        if (!_isSystemApp(app.packageName)) {
+          totalTime += app.usage;
+        }
+      }
+
+      print(">>> Screen Time for ${startDate.toString().split(' ')[0]}: ${totalTime.inMinutes} min");
+      return totalTime;
+    } catch (e) {
+      print('Error getting screen time for date: $e');
+      return Duration.zero;
+    }
+  }
+
+  /// گرفتن داده‌های ۳۰ روز گذشته
+  Future<Map<DateTime, Duration>> getScreenTimeForPast30Days() async {
+    try {
+      final Map<DateTime, Duration> data = {};
+      final now = DateTime.now();
+
+      for (int i = 0; i <= 30; i++) {
+        final date = now.subtract(Duration(days: i));
+        final dayStart = DateTime(date.year, date.month, date.day);
+        final dayEnd = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+        try {
+          final screenTime = await getScreenTimeForDate(dayStart, dayEnd);
+          if (screenTime.inMinutes > 0) {
+            data[DateTime(date.year, date.month, date.day)] = screenTime;
+          }
+        } catch (e) {
+          print('Error loading data for ${date.toString()}: $e');
+        }
+      }
+
+      return data;
+    } catch (e) {
+      print('Error loading 30-day screen time data: $e');
+      return {};
     }
   }
 }

@@ -134,9 +134,7 @@ class HomePage extends StatelessWidget {
 
                     SizedBox(height: screenHeight * 0.04),
 
-                    /// Feature buttons
-                    _buildFeatureButtons(
-                        context, screenWidth, screenHeight),
+                    _buildFeatureButtons(context, screenWidth, screenHeight),
 
                     SizedBox(height: screenHeight * 0.06),
 

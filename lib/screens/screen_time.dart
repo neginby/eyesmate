@@ -1,9 +1,9 @@
-// lib/screens/page2.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/screen_time_widgets.dart';
 import '../providers/usage_provider.dart';
 import '../models/usage_models.dart';
+import 'calendar_page.dart';
 
 class Page3 extends StatefulWidget {
   const Page3({super.key});
@@ -87,13 +87,9 @@ class _Page3State extends State<Page3> {
         // Back button
         GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: Container(
+          child: SizedBox(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
             child: const Icon(
               Icons.arrow_back_ios,
               color: Colors.white,
@@ -110,7 +106,6 @@ class _Page3State extends State<Page3> {
                 SizedBox(
                   width: 50,
                   height: 35,
-                  // ADD YOUR LOGO IMAGE HERE
                   child: Image.asset('assets/images/icon1.png', fit: BoxFit.contain),
                 ),
                 SizedBox(width: screenWidth * 0.03),
@@ -128,17 +123,28 @@ class _Page3State extends State<Page3> {
           ),
         ),
         // Calendar icon placeholder
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: const Color(0xFF8B83B6),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(
-            Icons.calendar_month,
-            color: Colors.white,
-            size: 20,
+        // In the _buildHeader method, replace the calendar icon container with this:
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CalendarScreenTimePage(),
+              ),
+            );
+          },
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B83B6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.calendar_month,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
         ),
       ],
@@ -574,7 +580,7 @@ class _Page3State extends State<Page3> {
         SizedBox(height: screenHeight * 0.03),
 
         // Refresh button (optional - for testing)
-        if (const bool.fromEnvironment('dart.vm.product') == false) // Only in debug mode
+         if (const bool.fromEnvironment('dart.vm.product') == false) // Only in debug mode
           Center(
             child: TextButton.icon(
               onPressed: () => context.read<UsageProvider>().refresh(),

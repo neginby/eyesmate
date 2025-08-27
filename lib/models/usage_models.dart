@@ -1,4 +1,3 @@
-// lib/models/usage_models.dart
 import 'package:flutter/material.dart';
 
 /// Model for app usage data

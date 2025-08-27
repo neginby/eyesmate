@@ -38,10 +38,8 @@ class _Page4State extends State<Page4> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header with back button and logo
                         Row(
                           children: [
-                            // Back button
                             GestureDetector(
                               onTap: () {
                                 Navigator.pop(context);
@@ -49,10 +47,6 @@ class _Page4State extends State<Page4> {
                               child: SizedBox(
                                 width: 40,
                                 height: 40,
-                                // decoration: BoxDecoration(
-                                //   color: Colors.white.withOpacity(0.1),
-                                //   borderRadius: BorderRadius.circular(8),
-                                // ),
                                 child: const Icon(
                                   Icons.arrow_back,
                                   color: Colors.white,
@@ -60,7 +54,6 @@ class _Page4State extends State<Page4> {
                                 ),
                               ),
                             ),
-                            // Spacer to center the logo
                             Expanded(
                               child: Center(
                                 child: Row(
@@ -69,14 +62,7 @@ class _Page4State extends State<Page4> {
                                     SizedBox(
                                       width: 50,
                                       height: 35,
-                                      // ADD YOUR LOGO IMAGE HERE
                                       child: Image.asset('assets/images/icon1.png', fit: BoxFit.contain),
-                                      // child: Container(
-                                      //   decoration: BoxDecoration(
-                                      //     color: const Color(0xFF8B83B6),
-                                      //     borderRadius: BorderRadius.circular(8),
-                                      //   ),
-                                      // ),
                                     ),
                                     SizedBox(width: screenWidth * 0.03),
                                     Text(
@@ -92,7 +78,6 @@ class _Page4State extends State<Page4> {
                                 ),
                               ),
                             ),
-                            // Invisible container to balance the layout
                             Container(width: 40),
                           ],
                         ),

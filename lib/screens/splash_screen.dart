@@ -35,7 +35,7 @@ class _SplashScreenState extends State<SplashScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return Container(
+            return SizedBox(
               width: constraints.maxWidth,
               height: constraints.maxHeight,
               child: Column(
@@ -43,8 +43,6 @@ class _SplashScreenState extends State<SplashScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Spacer(flex: 2),
-
-                  // Logo placeholder - Add your logo image here
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.9,
                     height: MediaQuery.of(context).size.width * 0.9,
@@ -53,7 +51,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
                   SizedBox(height: MediaQuery.of(context).size.height * 0.04),
 
-                  // App name
                   Text(
                     'EyesMate',
                     style: TextStyle(
